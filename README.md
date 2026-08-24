@@ -50,7 +50,8 @@ TF-MTL-CBRKAN/
 ├── src/
 │   ├── efficient_kan/          # vendored efficient-kan (MIT, Blealtan/efficient-kan)
 │   └── models/
-│       └── CBR_KAN.py          # single-task CBR-KAN baseline model
+│       ├── CBR_KAN.py          # single-task CBR-KAN baseline model
+│       └── CBRKAN_MTL.py       # MTL: shared backbone + per-TF KAN heads
 ├── scripts/
 │   ├── train_mtl_cluster.py    # train CBR-KAN MTL on ONE TF cluster
 │   ├── train_all_clusters.py   # batch-train all clusters (serial, resumable)
