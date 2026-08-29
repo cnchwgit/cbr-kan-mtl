@@ -1,0 +1,230 @@
+[
+ {
+  "Cluster_ID": 10301,
+  "Task_Type": "MTL",
+  "TF_Count": 23,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10301_t098.csv"
+ },
+ {
+  "Cluster_ID": 10302,
+  "Task_Type": "MTL",
+  "TF_Count": 21,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10302_t098.csv"
+ },
+ {
+  "Cluster_ID": 10303,
+  "Task_Type": "MTL",
+  "TF_Count": 21,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10303_t098.csv"
+ },
+ {
+  "Cluster_ID": 10304,
+  "Task_Type": "MTL",
+  "TF_Count": 20,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10304_t098.csv"
+ },
+ {
+  "Cluster_ID": 10305,
+  "Task_Type": "MTL",
+  "TF_Count": 20,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10305_t098.csv"
+ },
+ {
+  "Cluster_ID": 10306,
+  "Task_Type": "MTL",
+  "TF_Count": 20,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10306_t098.csv"
+ },
+ {
+  "Cluster_ID": 10307,
+  "Task_Type": "MTL",
+  "TF_Count": 16,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10307_t098.csv"
+ },
+ {
+  "Cluster_ID": 10308,
+  "Task_Type": "MTL",
+  "TF_Count": 15,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10308_t098.csv"
+ },
+ {
+  "Cluster_ID": 10309,
+  "Task_Type": "MTL",
+  "TF_Count": 12,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10309_t098.csv"
+ },
+ {
+  "Cluster_ID": 10310,
+  "Task_Type": "MTL",
+  "TF_Count": 10,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10310_t098.csv"
+ },
+ {
+  "Cluster_ID": 10311,
+  "Task_Type": "MTL",
+  "TF_Count": 9,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10311_t098.csv"
+ },
+ {
+  "Cluster_ID": 10312,
+  "Task_Type": "MTL",
+  "TF_Count": 8,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10312_t098.csv"
+ },
+ {
+  "Cluster_ID": 10313,
+  "Task_Type": "MTL",
+  "TF_Count": 7,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10313_t098.csv"
+ },
+ {
+  "Cluster_ID": 10314,
+  "Task_Type": "MTL",
+  "TF_Count": 7,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10314_t098.csv"
+ },
+ {
+  "Cluster_ID": 10315,
+  "Task_Type": "MTL",
+  "TF_Count": 7,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10315_t098.csv"
+ },
+ {
+  "Cluster_ID": 10316,
+  "Task_Type": "MTL",
+  "TF_Count": 7,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10316_t098.csv"
+ },
+ {
+  "Cluster_ID": 10317,
+  "Task_Type": "MTL",
+  "TF_Count": 6,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10317_t098.csv"
+ },
+ {
+  "Cluster_ID": 10318,
+  "Task_Type": "MTL",
+  "TF_Count": 6,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10318_t098.csv"
+ },
+ {
+  "Cluster_ID": 10319,
+  "Task_Type": "MTL",
+  "TF_Count": 6,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10319_t098.csv"
+ },
+ {
+  "Cluster_ID": 10320,
+  "Task_Type": "MTL",
+  "TF_Count": 5,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10320_t098.csv"
+ },
+ {
+  "Cluster_ID": 10321,
+  "Task_Type": "MTL",
+  "TF_Count": 5,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10321_t098.csv"
+ },
+ {
+  "Cluster_ID": 10322,
+  "Task_Type": "MTL",
+  "TF_Count": 5,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10322_t098.csv"
+ },
+ {
+  "Cluster_ID": 10323,
+  "Task_Type": "MTL",
+  "TF_Count": 5,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10323_t098.csv"
+ },
+ {
+  "Cluster_ID": 10324,
+  "Task_Type": "MTL",
+  "TF_Count": 4,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10324_t098.csv"
+ },
+ {
+  "Cluster_ID": 10325,
+  "Task_Type": "MTL",
+  "TF_Count": 4,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10325_t098.csv"
+ },
+ {
+  "Cluster_ID": 10326,
+  "Task_Type": "MTL",
+  "TF_Count": 4,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10326_t098.csv"
+ },
+ {
+  "Cluster_ID": 10327,
+  "Task_Type": "MTL",
+  "TF_Count": 3,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10327_t098.csv"
+ },
+ {
+  "Cluster_ID": 10328,
+  "Task_Type": "MTL",
+  "TF_Count": 3,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10328_t098.csv"
+ },
+ {
+  "Cluster_ID": 10329,
+  "Task_Type": "MTL",
+  "TF_Count": 3,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10329_t098.csv"
+ },
+ {
+  "Cluster_ID": 10330,
+  "Task_Type": "MTL",
+  "TF_Count": 3,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10330_t098.csv"
+ },
+ {
+  "Cluster_ID": 10331,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10331_t098.csv"
+ },
+ {
+  "Cluster_ID": 10332,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10332_t098.csv"
+ },
+ {
+  "Cluster_ID": 10333,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10333_t098.csv"
+ },
+ {
+  "Cluster_ID": 10334,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10334_t098.csv"
+ },
+ {
+  "Cluster_ID": 10335,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10335_t098.csv"
+ },
+ {
+  "Cluster_ID": 10336,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10336_t098.csv"
+ },
+ {
+  "Cluster_ID": 10337,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10337_t098.csv"
+ },
+ {
+  "Cluster_ID": 10338,
+  "Task_Type": "MTL",
+  "TF_Count": 2,
+  "TF_List_CSV": "data/cluster_t098_csvs/cluster_10338_t098.csv"
+ }
+]

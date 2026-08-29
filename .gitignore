@@ -35,3 +35,4 @@ checkpoints/
 *.fa
 *.fna
 *.npz
+!data/demo_fasta/*.fasta

@@ -75,8 +75,14 @@ def main():
             d = json.load(open(jp))
         except Exception:
             continue
-        m = d['test_metrics']
-        single_results[(d['TF_Name'], d['GSM_ID'])] = {
+        # train_single.py writes metrics at top level (with tf_name/gsm_id),
+        # older versions nested them under d['test_metrics'] — accept both.
+        m = d.get('test_metrics') or d
+        tf_name = d.get('TF_Name') or d.get('tf_name')
+        gsm_id = d.get('GSM_ID') or d.get('gsm_id')
+        if tf_name is None or gsm_id is None:
+            continue
+        single_results[(tf_name, gsm_id)] = {
             'roc_auc': m['roc_auc'],
             'pr_auc': m.get('pr_auc', 0),
             'f1': m.get('f1', 0),
