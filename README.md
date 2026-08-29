@@ -99,9 +99,13 @@ split into 38 sub-clusters → 479 groups) is provided in
 `data/clusters_t98_split.txt`; the per-cluster TF lists live in
 `data/cluster_t098_csvs/`.
 
-**Data availability:** the complete FASTA dataset (all 1,043 TFs) is
-available from the corresponding author on request, and will be deposited
-in a public repository (e.g. Zenodo) upon acceptance.
+**Data availability:** the complete FASTA dataset (all 1,043 TFs, 12 GB,
+1043 × `.pos.fasta` + `.neg.fasta`) is included locally at
+`data/full_fasta/` on the author's machine and is available for the
+Editorial Board and reviewers during the peer-review process. For a
+public release it will additionally be deposited in a public repository
+(e.g. Zenodo) upon acceptance; for now, point `--data-root` at
+`data/full_fasta` to reproduce the full experiment.
 
 ## Installation
 
