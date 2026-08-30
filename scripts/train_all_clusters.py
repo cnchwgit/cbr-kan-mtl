@@ -3,19 +3,24 @@
 Batch training: run CBR-KAN MTL v5 across all TF clusters (t098, threshold=0.98)
 ===============================================================================
 Serial single-GPU runner. Skips clusters that already have a valid summary.json.
-Optionally train the C001 sub-clusters (38 sub-clusters after splitting the
-301-TF giant cluster).
 
-Usage:
+Usage (plan auto-built from the 204 cluster CSVs in data/cluster_t098_csvs/):
     python scripts/train_all_clusters.py \
-        --plan results/cluster_mtl_t098_plan.json \
         --results-base results/mtl_v5_t098 \
         --log-dir logs \
         --data-root /path/to/fasta_datasets
+
+Or with an explicit plan JSON (legacy):
+    python scripts/train_all_clusters.py \
+        --plan <plan.json> \
+        --results-base results/mtl_v5_t098 \
+        --data-root /path/to/fasta_datasets
 """
 import argparse
+import csv
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -24,9 +29,34 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+def build_plan_from_csvs(csv_dir):
+    """Build the training plan directly from the per-cluster TF-list CSVs.
+
+    Each file data/cluster_t098_csvs/cluster_<ID>_t098.csv is one cluster;
+    the CSV header is the first row, each data row is one TF.
+    """
+    plan = []
+    for f in sorted(Path(csv_dir).glob('cluster_*_t098.csv')):
+        m = re.search(r'cluster_(\d+)_t098\.csv$', f.name)
+        if not m:
+            continue
+        cid = int(m.group(1))
+        with open(f) as fh:
+            n_tf = sum(1 for _ in csv.reader(fh)) - 1  # minus header
+        if n_tf < 2:
+            continue  # MTL clusters only (size >= 2)
+        plan.append({'Cluster_ID': cid, 'Task_Type': 'MTL',
+                     'TF_Count': n_tf, 'TF_List_CSV': str(f)})
+    return plan
+
+
 def parse_args():
     p = argparse.ArgumentParser(description='Batch train CBR-KAN MTL v5 over t098 clusters')
-    p.add_argument('--plan', required=True, help='Path to plan JSON (list of {Cluster_ID, TF_List_CSV})')
+    p.add_argument('--plan', default=None,
+                   help='Path to plan JSON (list of {Cluster_ID, TF_List_CSV}); '
+                        'if omitted, auto-built from data/cluster_t098_csvs/')
+    p.add_argument('--cluster-csv-dir', default=str(REPO_ROOT / 'data' / 'cluster_t098_csvs'),
+                   help='Dir of per-cluster TF-list CSVs (used when --plan is omitted)')
     p.add_argument('--results-base', required=True, help='Output root dir')
     p.add_argument('--log-dir', default=str(REPO_ROOT / 'logs'))
     p.add_argument('--data-root', required=True, help='Dir containing {GSM_ID}.pos.fasta/.neg.fasta')
@@ -46,7 +76,12 @@ def main():
     os.makedirs(RESULTS_BASE, exist_ok=True)
     os.makedirs(LOG_DIR, exist_ok=True)
 
-    plan = json.load(open(args.plan))
+    if args.plan:
+        plan = json.load(open(args.plan))
+    else:
+        plan = build_plan_from_csvs(args.cluster_csv_dir)
+        print(f'[train_all_clusters] --plan 未指定，从 {args.cluster_csv_dir} 自动构建计划: '
+              f'{len(plan)} 簇')
     total = len(plan)
 
     success = skipped = failed = 0

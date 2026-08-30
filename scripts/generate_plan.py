@@ -11,7 +11,7 @@ Only clusters with size >= 2 are included (MTL clusters).
 Usage:
     python scripts/generate_plan.py \
         --cluster-dir clustering_results/t098 \
-        --tf-info data/tf_info_with_performance_and_all_subgroups.csv \
+        --tf-info <path/to/tf_info.csv> \
         --output-csv-dir data/cluster_t098_csvs \
         --output-json results/cluster_mtl_t098_plan.json
 """
