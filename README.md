@@ -97,7 +97,7 @@ variable). Point the scripts at your dataset directory; the included
 The paper uses **204 MTL clusters** (sequence-similarity clustering,
 t098 threshold). The per-cluster TF lists are provided directly as
 **204 CSV files** in `data/cluster_t098_csvs/` — one CSV per cluster
-(filename suffix = cluster ID, e.g. `cluster_005_t098.csv`), each row
+(filename = sequential index 001–204, e.g. `cluster_001.csv`), each row
 mapping a TF to its `GSM_ID`.
 
 **Data availability:** the complete FASTA dataset (all 1,043 TFs, 12 GB,
@@ -140,8 +140,8 @@ python scripts/generate_plan.py \
 
 ```bash
 python scripts/train_mtl_cluster.py \
-    --tf-list data/cluster_t098_csvs/cluster_005_t098.csv \
-    --output-dir results/cluster_005 \
+    --tf-list data/cluster_t098_csvs/cluster_001.csv \
+    --output-dir results/cluster_001 \
     --data-root /path/to/fasta_datasets \
     --device cuda:0
 ```

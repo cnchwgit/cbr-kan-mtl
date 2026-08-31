@@ -98,6 +98,7 @@ def main():
     plan = []
     valid_tfs = 0
     skipped_tfs = []
+    seq_idx = 0  # 新编号: 按数值序依次分配 cluster_001, cluster_002, ...
 
     for cluster_id, size, tf_names in cluster_data:
         if size < 2:
@@ -124,11 +125,13 @@ def main():
             print(f"  ⚠️ Cluster {cluster_id}: 有效 TF < 2 (剩余 {len(tf_gsm_list)})，跳过")
             continue
 
-        temp_csv = os.path.join(TEMP_CSV_DIR, f'cluster_{cluster_id:03d}_t098.csv')
+        seq_idx += 1
+        temp_csv = os.path.join(TEMP_CSV_DIR, f'cluster_{seq_idx:03d}.csv')
         pd.DataFrame(tf_gsm_list).to_csv(temp_csv, index=False)
 
         plan.append({
-            "Cluster_ID": cluster_id,
+            "Cluster_ID": seq_idx,
+            "Original_Cluster_ID": cluster_id,
             "Task_Type": "MTL",
             "TF_Count": len(tf_gsm_list),
             "TF_List_CSV": temp_csv,

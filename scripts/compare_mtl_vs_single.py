@@ -32,7 +32,7 @@ def parse_args():
     p = argparse.ArgumentParser(description='CBR-KAN MTL v5 (t098) vs 单任务对比分析')
     p.add_argument('--single-dir', required=True, help='单任务基线结果目录 (每个TF一个子目录, 含 test_metrics.json)')
     p.add_argument('--mtl-dir', required=True, help='MTL v5 结果目录 (每个簇一个子目录, 含 test_tf_metrics.csv)')
-    p.add_argument('--cluster-csv-dir', required=True, help='簇定义 CSV 目录 (cluster_*_t098.csv)')
+    p.add_argument('--cluster-csv-dir', required=True, help='簇定义 CSV 目录 (cluster_*.csv)')
     p.add_argument('--output-dir', default='results')
     p.add_argument('--tag', default='cbrkan_mtl_v5_t098', help='输出文件名标签')
     return p.parse_args()
@@ -54,9 +54,9 @@ def main():
     tf_to_cluster = {}
     cluster_to_tfs = defaultdict(list)
     cluster_to_type = {}
-    csv_files = sorted(glob.glob(os.path.join(CSV_DIR, 'cluster_*_t098.csv')))
+    csv_files = sorted(glob.glob(os.path.join(CSV_DIR, 'cluster_*.csv')))
     for fpath in csv_files:
-        cid = int(re.search(r'cluster_(\d+)_t098\.csv', os.path.basename(fpath)).group(1))
+        cid = int(re.search(r'cluster_(\d+)\.csv', os.path.basename(fpath)).group(1))
         tdf = pd.read_csv(fpath)
         for _, row in tdf.iterrows():
             tf_to_cluster[(row['TF_Name'], row['GSM_ID'])] = cid
@@ -107,10 +107,10 @@ def main():
         except Exception:
             continue
 
-        m = re.search(r'cluster_(\d+)_', cluster_dir)
+        m = re.search(r'cluster_(\d+)', cluster_dir)
         cid = int(m.group(1)) if m else -1
 
-        csv_path = os.path.join(CSV_DIR, f'cluster_{cid:03d}_t098.csv') if cid > 0 else None
+        csv_path = os.path.join(CSV_DIR, f'cluster_{cid:03d}.csv') if cid > 0 else None
         gsm_map = {}
         if csv_path and os.path.exists(csv_path):
             cdf = pd.read_csv(csv_path)

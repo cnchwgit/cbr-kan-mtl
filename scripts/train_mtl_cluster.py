@@ -15,8 +15,8 @@ Data: balanced positive/negative ChIP-seq FASTA per TF
 
 Usage:
     python scripts/train_mtl_cluster.py \
-        --tf-list data/cluster_t098_csvs/cluster_005_t098.csv \
-        --output-dir results/cluster_005 \
+        --tf-list data/cluster_t098_csvs/cluster_001.csv \
+        --output-dir results/cluster_001 \
         --data-root /path/to/fasta_datasets \
         --device cuda:0
 """

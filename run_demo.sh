@@ -21,10 +21,10 @@ BATCH=64
 MAX_PER_CLASS=300
 SEED=42
 
-echo "==> [1/4] Train CBR-KAN MTL on cluster_005 (SP140 + SP140L)"
+echo "==> [1/4] Train CBR-KAN MTL on cluster_001 (SP140 + SP140L)"
 python3 scripts/train_mtl_cluster.py \
-    --tf-list data/cluster_t098_csvs/cluster_005_t098.csv \
-    --output-dir results/demo_mtl/cluster_005_t098 \
+    --tf-list data/cluster_t098_csvs/cluster_001.csv \
+    --output-dir results/demo_mtl/cluster_001 \
     --data-root "$DATA_ROOT" \
     --epochs "$EPOCHS" \
     --batch-size "$BATCH" \
@@ -55,7 +55,7 @@ python3 scripts/compare_mtl_vs_single.py \
     --tag demo
 
 echo "==> [4/4] Demo finished."
-echo "    MTL results:      results/demo_mtl/cluster_005_t098/"
+echo "    MTL results:      results/demo_mtl/cluster_001/"
 echo "    Single results:   results/demo_single/"
 echo "    Comparison CSV:   results/comparison_demo.csv"
 echo "    Comparison table: results/comparison_demo_detailed.csv"

@@ -32,12 +32,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def build_plan_from_csvs(csv_dir):
     """Build the training plan directly from the per-cluster TF-list CSVs.
 
-    Each file data/cluster_t098_csvs/cluster_<ID>_t098.csv is one cluster;
-    the CSV header is the first row, each data row is one TF.
+    Each file data/cluster_t098_csvs/cluster_<N>.csv (N = 001..204, sequential
+    index in numeric cluster order) is one cluster; the CSV header is the
+    first row, each data row is one TF.
     """
     plan = []
-    for f in sorted(Path(csv_dir).glob('cluster_*_t098.csv')):
-        m = re.search(r'cluster_(\d+)_t098\.csv$', f.name)
+    for f in sorted(Path(csv_dir).glob('cluster_*.csv')):
+        m = re.search(r'cluster_(\d+)\.csv$', f.name)
         if not m:
             continue
         cid = int(m.group(1))
@@ -102,7 +103,7 @@ def main():
         cid = task['Cluster_ID']
         tf_cnt = task['TF_Count']
         tf_csv = task['TF_List_CSV']
-        out_dir = os.path.join(RESULTS_BASE, f'cluster_{cid:03d}_t098')
+        out_dir = os.path.join(RESULTS_BASE, f'cluster_{cid:03d}')
         summary_file = os.path.join(out_dir, 'summary.json')
 
         # 跳过已完成的
