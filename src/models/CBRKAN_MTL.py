@@ -20,7 +20,7 @@ import torch.nn as nn
 from src.efficient_kan import KAN  # noqa: E402
 
 
-# ======================== CBR-KAN 共享 backbone（与单任务完全一致） ========================
+# ======================== CBR-KAN shared backbone (identical to the single-task version) ========================
 class CBRKANSharedBackbone(nn.Module):
     def __init__(self, len_vocab, embed_dim=100):
         super().__init__()
@@ -81,9 +81,9 @@ class CBRKANSharedBackbone(nn.Module):
 
 class CBRKAN_MTL_MultiHead(nn.Module):
     """
-    真 Multi-Head MTL:
-    - 共享 CBR-KAN backbone（所有TF共用）
-    - per-TF KAN heads（每个TF一个独立预测头）
+    True Multi-Head MTL:
+    - shared CBR-KAN backbone (shared by all TFs)
+    - per-TF KAN heads (one independent prediction head per TF)
     """
     def __init__(self, tf_names, len_vocab, embed_dim=100):
         super().__init__()
@@ -101,11 +101,11 @@ class CBRKAN_MTL_MultiHead(nn.Module):
         """
         features = self.backbone(x)  # [B, 256]
 
-        # 如果所有样本同一TF，批量处理
+        # if all samples belong to the same TF, process them as a batch
         if len(set(tf_names)) == 1:
             return self.tf_heads[tf_names[0]](features)
 
-        # 多TF：按TF分组批量处理
+        # multiple TFs: group by TF and process in batches
         outputs = torch.zeros(len(tf_names), 2, device=features.device)
         tf_groups = defaultdict(list)
         for i, name in enumerate(tf_names):

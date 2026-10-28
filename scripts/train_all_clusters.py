@@ -4,7 +4,7 @@ Batch training: run CBR-KAN MTL v5 across all TF clusters (t098, threshold=0.98)
 ===============================================================================
 Serial single-GPU runner. Skips clusters that already have a valid summary.json.
 
-Usage (plan auto-built from the 204 cluster CSVs in data/cluster_t098_csvs/):
+Usage (plan auto-built from the 204 cluster CSVs in data/cluster_csvs/):
     python scripts/train_all_clusters.py \
         --results-base results/mtl_v5_t098 \
         --log-dir logs \
@@ -32,7 +32,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def build_plan_from_csvs(csv_dir):
     """Build the training plan directly from the per-cluster TF-list CSVs.
 
-    Each file data/cluster_t098_csvs/cluster_<N>.csv (N = 001..204, sequential
+    Each file data/cluster_csvs/cluster_<N>.csv (N = 001..204, sequential
     index in numeric cluster order) is one cluster; the CSV header is the
     first row, each data row is one TF.
     """
@@ -55,8 +55,8 @@ def parse_args():
     p = argparse.ArgumentParser(description='Batch train CBR-KAN MTL v5 over t098 clusters')
     p.add_argument('--plan', default=None,
                    help='Path to plan JSON (list of {Cluster_ID, TF_List_CSV}); '
-                        'if omitted, auto-built from data/cluster_t098_csvs/')
-    p.add_argument('--cluster-csv-dir', default=str(REPO_ROOT / 'data' / 'cluster_t098_csvs'),
+                        'if omitted, auto-built from data/cluster_csvs/')
+    p.add_argument('--cluster-csv-dir', default=str(REPO_ROOT / 'data' / 'cluster_csvs'),
                    help='Dir of per-cluster TF-list CSVs (used when --plan is omitted)')
     p.add_argument('--results-base', required=True, help='Output root dir')
     p.add_argument('--log-dir', default=str(REPO_ROOT / 'logs'))
@@ -81,8 +81,8 @@ def main():
         plan = json.load(open(args.plan))
     else:
         plan = build_plan_from_csvs(args.cluster_csv_dir)
-        print(f'[train_all_clusters] --plan 未指定，从 {args.cluster_csv_dir} 自动构建计划: '
-              f'{len(plan)} 簇')
+        print(f'[train_all_clusters] --plan not specified, auto-building the plan from {args.cluster_csv_dir}: '
+              f'{len(plan)} clusters')
     total = len(plan)
 
     success = skipped = failed = 0
@@ -90,13 +90,13 @@ def main():
     t_start = time.time()
 
     print(f"\n{'='*60}")
-    print(f" CBR-KAN MTL v5 批量训练")
-    print(f" 架构: True Multi-Head MTL (per-TF KAN heads)")
-    print(f" 聚类: t098 (threshold=0.98), 仅 MTL 簇 (size>=2)")
-    print(f" 参数: epochs={args.epochs}, batch={args.batch_size}, 60/20/20, seed=42")
-    print(f" 总簇数: {total}")
-    print(f" 输出: {RESULTS_BASE}")
-    print(f" 开始: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f" CBR-KAN MTL v5 batch training")
+    print(f" Architecture: True Multi-Head MTL (per-TF KAN heads)")
+    print(f" Clustering: t098 (threshold=0.98), MTL clusters only (size>=2)")
+    print(f" Params: epochs={args.epochs}, batch={args.batch_size}, 60/20/20, seed=42")
+    print(f" Total clusters: {total}")
+    print(f" Output: {RESULTS_BASE}")
+    print(f" Start: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}\n")
 
     for idx, task in enumerate(plan, 1):
@@ -106,13 +106,13 @@ def main():
         out_dir = os.path.join(RESULTS_BASE, f'cluster_{cid:03d}')
         summary_file = os.path.join(out_dir, 'summary.json')
 
-        # 跳过已完成的
+        # skip already completed ones
         if os.path.exists(summary_file):
             try:
                 s = json.load(open(summary_file))
                 if s.get('test') and s['test'].get('overall_roc_auc', 0) > 0.1:
                     skipped += 1
-                    print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ({tf_cnt:3d} TF) ✅ 跳过")
+                    print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ({tf_cnt:3d} TF) ✅ skipped")
                     continue
             except Exception:
                 pass
@@ -120,14 +120,14 @@ def main():
         progress_file = os.path.join(out_dir, '.training')
         if os.path.exists(progress_file):
             skipped += 1
-            print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ({tf_cnt:3d} TF) ⏳ 训练中 (标记存在)")
+            print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ({tf_cnt:3d} TF) ⏳ training (marker present)")
             continue
 
         cluster_log = os.path.join(LOG_DIR, f'cluster_{cid:03d}.log')
         os.makedirs(out_dir, exist_ok=True)
         Path(progress_file).touch()
 
-        # 超大簇降低 batch size 防 OOM
+        # reduce batch size for very large clusters to avoid OOM
         batch_size = args.batch_size
         max_per_class = 15000
         if tf_cnt >= 100:
@@ -170,7 +170,7 @@ def main():
                 failed += 1
                 failed_list.append(cid)
         except subprocess.TimeoutExpired:
-            print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ⏰ 超时 >{timeout//3600}h")
+            print(f"  [{idx:3d}/{total}] Cluster {cid:03d} ⏰ timeout >{timeout//3600}h")
             failed += 1
             failed_list.append((cid, 'timeout'))
         except Exception as e:
@@ -181,20 +181,20 @@ def main():
             if os.path.exists(progress_file):
                 os.remove(progress_file)
 
-        # 每10个簇打印进度
+        # print progress every 10 clusters
         if idx % 10 == 0 or idx == total:
             elapsed = time.time() - t_start
             rate = idx / elapsed * 60 if elapsed > 0 else 0
             rem = (total - idx) / rate if rate > 0 else 0
             print(f"    📊 {idx}/{total} S={success} F={failed} SK={skipped} "
-                  f"{rate:.1f}簇/分 剩余≈{rem:.0f}分 ({rem/60:.1f}h)")
+                  f"{rate:.1f} clusters/min remaining≈{rem:.0f}min ({rem/60:.1f}h)")
 
     t_elap = time.time() - t_start
     print(f"\n{'='*60}")
-    print(f"✅ 完成! {success} OK, {failed} FAIL, {skipped} SKIP")
-    print(f"耗时: {t_elap:.0f}s ({t_elap/3600:.1f}h)")
+    print(f"✅ Done! {success} OK, {failed} FAIL, {skipped} SKIP")
+    print(f"Elapsed: {t_elap:.0f}s ({t_elap/3600:.1f}h)")
     if failed_list:
-        print(f"失败: {failed_list[:30]}")
+        print(f"Failed: {failed_list[:30]}")
     print(f"{'='*60}")
 
 

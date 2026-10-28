@@ -3,16 +3,23 @@ import torch.nn.functional as F
 import math
 
 """
-1.内存效率提升：原始实现需要扩展所有中间变量来执行不同的激活函数，而此代码中将计算重新制定为使用不同的基函数激活输入，
-  然后线性组合它们。这种重新制定可以显著降低内存成本，并将计算变得更加高效。
+1. Memory efficiency improvement: the original implementation needs to expand all intermediate
+  variables to apply different activation functions, whereas this code reformulates the computation
+  to activate the input with different basis functions and then linearly combine them. This
+  reformulation significantly reduces memory cost and makes the computation more efficient.
 
-2.正则化方法的改变：原始实现中使用的L1正则化需要对张量进行非线性操作，与重新制定的计算不兼容。
-  因此，此代码中将L1正则化改为对权重的L1正则化，这更符合神经网络中常见的正则化方法，并且与重新制定的计算兼容。
+2. Change of regularization method: the L1 regularization used in the original implementation requires
+  nonlinear operations on the tensor, which is incompatible with the reformulated computation.
+  Therefore, this code changes L1 regularization to L1 regularization on the weights, which is more
+  consistent with common regularization methods in neural networks and compatible with the
+  reformulated computation.
 
-3.激活函数缩放选项：原始实现中包括了每个激活函数的可学习缩放，但这个库提供了一个选项来禁用这个特性。
-  禁用缩放可以使模型更加高效，但可能会影响结果。
+3. Activation scaling option: the original implementation includes a learnable scale for each
+  activation function, but this library provides an option to disable this feature.
+  Disabling scaling can make the model more efficient but may affect the results.
 
-4.参数初始化的改变：为了解决在MNIST数据集上的性能问题，此代码修改了参数的初始化方式，使用kaiming初始化。
+4. Change of parameter initialization: to solve the performance issue on the MNIST dataset, this code
+  changes the parameter initialization scheme to use kaiming initialization.
 """
 
 class KANLinear(torch.nn.Module):
@@ -20,24 +27,24 @@ class KANLinear(torch.nn.Module):
         self,
         in_features,
         out_features,
-        grid_size=5,  # 网格大小，默认为 5
-        spline_order=3, # 分段多项式的阶数，默认为 3
-        scale_noise=0.1,  # 缩放噪声，默认为 0.1
-        scale_base=1.0,   # 基础缩放，默认为 1.0
-        scale_spline=1.0,    # 分段多项式的缩放，默认为 1.0
+        grid_size=5,  # grid size, default 5
+        spline_order=3, # order of the piecewise polynomial, default 3
+        scale_noise=0.1,  # scale of the noise, default 0.1
+        scale_base=1.0,   # base scale, default 1.0
+        scale_spline=1.0,    # scale of the piecewise polynomial, default 1.0
         enable_standalone_scale_spline=True,
-        base_activation=torch.nn.SiLU,  # 基础激活函数，默认为 SiLU（Sigmoid Linear Unit）
+        base_activation=torch.nn.SiLU,  # base activation function, default SiLU (Sigmoid Linear Unit)
         grid_eps=0.02,
-        grid_range=[-1, 1],  # 网格范围，默认为 [-1, 1]
+        grid_range=[-1, 1],  # grid range, default [-1, 1]
     ):
         super(KANLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.grid_size = grid_size # 设置网格大小和分段多项式的阶数
+        self.grid_size = grid_size  # grid size and spline order
         self.spline_order = spline_order
 
-        h = (grid_range[1] - grid_range[0]) / grid_size   # 计算网格步长
-        grid = ( # 生成网格
+        h = (grid_range[1] - grid_range[0]) / grid_size   # compute the grid step size
+        grid = ( # generate the grid
             (
                 torch.arange(-spline_order, grid_size + spline_order + 1) * h
                 + grid_range[0] 
@@ -45,30 +52,30 @@ class KANLinear(torch.nn.Module):
             .expand(in_features, -1)
             .contiguous()
         )
-        self.register_buffer("grid", grid)  # 将网格作为缓冲区注册
+        self.register_buffer("grid", grid)  # register the grid as a buffer
 
-        self.base_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features)) # 初始化基础权重和分段多项式权重
+        self.base_weight = torch.nn.Parameter(torch.Tensor(out_features, in_features))  # base weights
         self.spline_weight = torch.nn.Parameter(
             torch.Tensor(out_features, in_features, grid_size + spline_order)
         )
-        if enable_standalone_scale_spline:  # 如果启用独立的分段多项式缩放，则初始化分段多项式缩放参数
+        if enable_standalone_scale_spline:  # if the standalone piecewise polynomial scaling is enabled, initialize the scaling parameter
             self.spline_scaler = torch.nn.Parameter(
                 torch.Tensor(out_features, in_features)
             )
 
-        self.scale_noise = scale_noise # 保存缩放噪声、基础缩放、分段多项式的缩放、是否启用独立的分段多项式缩放、基础激活函数和网格范围的容差
+        self.scale_noise = scale_noise  # keep the constructor arguments for later use
         self.scale_base = scale_base
         self.scale_spline = scale_spline
         self.enable_standalone_scale_spline = enable_standalone_scale_spline
         self.base_activation = base_activation()
         self.grid_eps = grid_eps
 
-        self.reset_parameters()  # 重置参数
+        self.reset_parameters()  # reset the parameters
 
     def reset_parameters(self):
-        torch.nn.init.kaiming_uniform_(self.base_weight, a=math.sqrt(5) * self.scale_base)# 使用 Kaiming 均匀初始化基础权重
+        torch.nn.init.kaiming_uniform_(self.base_weight, a=math.sqrt(5) * self.scale_base)# initialize the base weights with Kaiming uniform
         with torch.no_grad():
-            noise = (# 生成缩放噪声
+            noise = (# generate the scaling noise
                 (
                     torch.rand(self.grid_size + 1, self.in_features, self.out_features)
                     - 1 / 2
@@ -76,14 +83,14 @@ class KANLinear(torch.nn.Module):
                 * self.scale_noise
                 / self.grid_size
             )
-            self.spline_weight.data.copy_( # 计算分段多项式权重
+            self.spline_weight.data.copy_( # compute the piecewise polynomial weights
                 (self.scale_spline if not self.enable_standalone_scale_spline else 1.0)
                 * self.curve2coeff(
                     self.grid.T[self.spline_order : -self.spline_order],
                     noise,
                 )
             )
-            if self.enable_standalone_scale_spline:  # 如果启用独立的分段多项式缩放，则使用 Kaiming 均匀初始化分段多项式缩放参数
+            if self.enable_standalone_scale_spline:  # if the standalone piecewise polynomial scaling is enabled, initialize the scaling parameter with Kaiming uniform
                 # torch.nn.init.constant_(self.spline_scaler, self.scale_spline)
                 torch.nn.init.kaiming_uniform_(self.spline_scaler, a=math.sqrt(5) * self.scale_spline)
 
@@ -98,17 +105,17 @@ class KANLinear(torch.nn.Module):
             torch.Tensor: B-spline bases tensor of shape (batch_size, in_features, grid_size + spline_order).
         """
         """
-        计算给定输入张量的 B-样条基函数。
+        Compute the B-spline bases for the given input tensor.
 
-        参数:
-        x (torch.Tensor): 输入张量，形状为 (batch_size, in_features)。
+        Args:
+        x (torch.Tensor): input tensor of shape (batch_size, in_features).
 
-        返回:
-        torch.Tensor: B-样条基函数张量，形状为 (batch_size, in_features, grid_size + spline_order)。
+        Returns:
+        torch.Tensor: B-spline bases tensor of shape (batch_size, in_features, grid_size + spline_order).
         """
         assert x.dim() == 2 and x.size(1) == self.in_features
 
-        grid: torch.Tensor = ( # 形状为 (in_features, grid_size + 2 * spline_order + 1)
+        grid: torch.Tensor = ( # shape (in_features, grid_size + 2 * spline_order + 1)
             self.grid
         )  # (in_features, grid_size + 2 * spline_order + 1)
         x = x.unsqueeze(-1)
@@ -143,25 +150,25 @@ class KANLinear(torch.nn.Module):
             torch.Tensor: Coefficients tensor of shape (out_features, in_features, grid_size + spline_order).
         """
         """
-        计算插值给定点的曲线的系数。
+        Compute the coefficients of the curve that interpolates the given points.
 
-        参数:
-        x (torch.Tensor): 输入张量，形状为 (batch_size, in_features)。
-        y (torch.Tensor): 输出张量，形状为 (batch_size, in_features, out_features)。
-        返回:
-        torch.Tensor: 系数张量，形状为 (out_features, in_features, grid_size + spline_order)。
+        Args:
+        x (torch.Tensor): input tensor of shape (batch_size, in_features).
+        y (torch.Tensor): output tensor of shape (batch_size, in_features, out_features).
+        Returns:
+        torch.Tensor: coefficients tensor of shape (out_features, in_features, grid_size + spline_order).
         """
         assert x.dim() == 2 and x.size(1) == self.in_features
         assert y.size() == (x.size(0), self.in_features, self.out_features)
-        # 计算 B-样条基函数
+        # compute the B-spline bases
         A = self.b_splines(x).transpose(
-            0, 1 # 形状为 (in_features, batch_size, grid_size + spline_order)
+            0, 1 # shape (in_features, batch_size, grid_size + spline_order)
         )  # (in_features, batch_size, grid_size + spline_order)
-        B = y.transpose(0, 1)  # (in_features, batch_size, out_features) # 形状为 (in_features, batch_size, out_features)
-        solution = torch.linalg.lstsq(   # 使用最小二乘法求解线性方程组
+        B = y.transpose(0, 1)  # (in_features, batch_size, out_features) # shape (in_features, batch_size, out_features)
+        solution = torch.linalg.lstsq(   # solve the linear system by least squares
             A, B
-        ).solution  # (in_features, grid_size + spline_order, out_features)  # 形状为 (in_features, grid_size + spline_order, out_features)
-        result = solution.permute( # 调整结果的维度顺序
+        ).solution  # (in_features, grid_size + spline_order, out_features)  # shape (in_features, grid_size + spline_order, out_features)
+        result = solution.permute( # reorder the dimensions of the result
             2, 0, 1
         )  # (out_features, in_features, grid_size + spline_order)
 
@@ -175,10 +182,10 @@ class KANLinear(torch.nn.Module):
     @property
     def scaled_spline_weight(self):
         """
-        获取缩放后的分段多项式权重。
+        Get the scaled piecewise polynomial weights.
 
-        返回:
-        torch.Tensor: 缩放后的分段多项式权重张量，形状与 self.spline_weight 相同。
+        Returns:
+        torch.Tensor: the scaled piecewise polynomial weight tensor, with the same shape as self.spline_weight.
         """
         return self.spline_weight * (
             self.spline_scaler.unsqueeze(-1)
@@ -186,46 +193,47 @@ class KANLinear(torch.nn.Module):
             else 1.0
         )
 
-    def forward(self, x: torch.Tensor): # 将输入数据通过模型的各个层，经过线性变换和激活函数处理，最终得到模型的输出结果
+    def forward(self, x: torch.Tensor):  # base linear branch + spline branch
         """
-        前向传播函数。
+        Forward pass.
 
-        参数:
-        x (torch.Tensor): 输入张量，形状为 (batch_size, in_features)。
+        Args:
+        x (torch.Tensor): input tensor of shape (batch_size, in_features).
 
-        返回:
-        torch.Tensor: 输出张量，形状为 (batch_size, out_features)。
+        Returns:
+        torch.Tensor: output tensor of shape (batch_size, out_features).
         """
         assert x.dim() == 2 and x.size(1) == self.in_features
 
-        base_output = F.linear(self.base_activation(x), self.base_weight) # 计算基础线性层的输出
-        spline_output = F.linear( # 计算分段多项式线性层的输出
+        base_output = F.linear(self.base_activation(x), self.base_weight) # compute the output of the base linear layer
+        spline_output = F.linear( # compute the output of the piecewise polynomial linear layer
             self.b_splines(x).view(x.size(0), -1),
             self.scaled_spline_weight.view(self.out_features, -1),
         )
-        return base_output + spline_output  # 返回基础线性层输出和分段多项式线性层输出的和
+        return base_output + spline_output  # return the sum of the base linear layer output and the piecewise polynomial linear layer output
 
     @torch.no_grad()
-    # 更新网格。
-    # 参数:
-    # x (torch.Tensor): 输入张量，形状为 (batch_size, in_features)。
-    # margin (float): 网格边缘空白的大小。默认为 0.01。
-    # 根据输入数据 x 的分布情况来动态更新模型的网格,使得模型能够更好地适应输入数据的分布特点，从而提高模型的表达能力和泛化能力。
+    # Update the grid.
+    # Args:
+    # x (torch.Tensor): input tensor of shape (batch_size, in_features).
+    # margin (float): size of the margin at the edges of the grid. Default 0.01.
+    # Adapt the grid to the distribution of the input data x, which improves expressiveness
+    # and generalization.
     def update_grid(self, x: torch.Tensor, margin=0.01): 
         assert x.dim() == 2 and x.size(1) == self.in_features
         batch = x.size(0)
 
-        splines = self.b_splines(x)  # (batch, in, coeff)  # 计算 B-样条基函数
-        splines = splines.permute(1, 0, 2)  # (in, batch, coeff)  # 调整维度顺序为 (in, batch, coeff)
+        splines = self.b_splines(x)  # (batch, in, coeff)  # compute the B-spline bases
+        splines = splines.permute(1, 0, 2)  # (in, batch, coeff)  # reorder the dimensions to (in, batch, coeff)
         orig_coeff = self.scaled_spline_weight  # (out, in, coeff)
-        orig_coeff = orig_coeff.permute(1, 2, 0)  # (in, coeff, out)  # 调整维度顺序为 (in, coeff, out)
+        orig_coeff = orig_coeff.permute(1, 2, 0)  # (in, coeff, out)  # reorder the dimensions to (in, coeff, out)
         unreduced_spline_output = torch.bmm(splines, orig_coeff)  # (in, batch, out)
         unreduced_spline_output = unreduced_spline_output.permute(
             1, 0, 2
         )  # (batch, in, out)
 
         # sort each channel individually to collect data distribution
-        x_sorted = torch.sort(x, dim=0)[0] # 对每个通道单独排序以收集数据分布
+        x_sorted = torch.sort(x, dim=0)[0] # sort each channel individually to collect the data distribution
         grid_adaptive = x_sorted[
             torch.linspace(
                 0, batch - 1, self.grid_size + 1, dtype=torch.int64, device=x.device
@@ -256,11 +264,11 @@ class KANLinear(torch.nn.Module):
             dim=0,
         )
 
-        self.grid.copy_(grid.T)   # 更新网格和分段多项式权重
+        self.grid.copy_(grid.T)   # update the grid and the piecewise polynomial weights
         self.spline_weight.data.copy_(self.curve2coeff(x, unreduced_spline_output))
 
     def regularization_loss(self, regularize_activation=1.0, regularize_entropy=1.0):
-        # 计算正则化损失，用于约束模型的参数，防止过拟合
+        # compute the regularization loss, used to constrain the model parameters and prevent overfitting
         """
         Compute the regularization loss.
 
@@ -274,19 +282,19 @@ class KANLinear(torch.nn.Module):
         sample-based regularization.
         """
         """
-        计算正则化损失。
+        Compute the regularization loss.
 
-        这是对原始 L1 正则化的简单模拟，因为原始方法需要从扩展的（batch, in_features, out_features）中间张量计算绝对值和熵，
-        而这个中间张量被 F.linear 函数隐藏起来，如果我们想要一个内存高效的实现。
+        This is a simple simulation of the original L1 regularization, because the original method needs to compute the absolute values and entropy from the expanded (batch, in_features, out_features) intermediate tensor,
+        and this intermediate tensor is hidden behind the F.linear function if we want a memory-efficient implementation.
 
-        现在的 L1 正则化是计算分段多项式权重的平均绝对值。作者的实现也包括这一项，除了基于样本的正则化。
+        The current L1 regularization computes the mean absolute value of the piecewise polynomial weights. The authors' implementation also includes this term, in addition to the sample-based regularization.
 
-        参数:
-        regularize_activation (float): 正则化激活项的权重，默认为 1.0。
-        regularize_entropy (float): 正则化熵项的权重，默认为 1.0。
+        Args:
+        regularize_activation (float): weight of the activation regularization term, default 1.0.
+        regularize_entropy (float): weight of the entropy regularization term, default 1.0.
 
-        返回:
-        torch.Tensor: 正则化损失。
+        Returns:
+        torch.Tensor: the regularization loss.
         """
         l1_fake = self.spline_weight.abs().mean(-1)
         regularization_loss_activation = l1_fake.sum()
@@ -298,7 +306,7 @@ class KANLinear(torch.nn.Module):
         )
 
 
-class KAN(torch.nn.Module): # 封装了一个KAN神经网络模型，可以用于对数据进行拟合和预测。
+class KAN(torch.nn.Module):  # KAN network: stack of KANLinear layers
     def __init__(
         self,
         layers_hidden,
@@ -312,18 +320,18 @@ class KAN(torch.nn.Module): # 封装了一个KAN神经网络模型，可以用�
         grid_range=[-1, 1],
     ):
         """
-        初始化 KAN 模型。
+        Initialize the KAN model.
 
-        参数:
-            layers_hidden (list): 包含每个隐藏层输入特征数量的列表。
-            grid_size (int): 网格大小，默认为 5。
-            spline_order (int): 分段多项式的阶数，默认为 3。
-            scale_noise (float): 缩放噪声，默认为 0.1。
-            scale_base (float): 基础缩放，默认为 1.0。
-            scale_spline (float): 分段多项式的缩放，默认为 1.0。
-            base_activation (torch.nn.Module): 基础激活函数，默认为 SiLU。
-            grid_eps (float): 网格调整参数，默认为 0.02。
-            grid_range (list): 网格范围，默认为 [-1, 1]。
+        Args:
+            layers_hidden (list): list containing the number of input features of each hidden layer.
+            grid_size (int): grid size, default 5.
+            spline_order (int): order of the piecewise polynomial, default 3.
+            scale_noise (float): scale of the noise, default 0.1.
+            scale_base (float): base scale, default 1.0.
+            scale_spline (float): scale of the piecewise polynomial, default 1.0.
+            base_activation (torch.nn.Module): base activation function, default SiLU.
+            grid_eps (float): grid adjustment parameter, default 0.02.
+            grid_range (list): grid range, default [-1, 1].
         """
         super(KAN, self).__init__()
         self.grid_size = grid_size
@@ -346,16 +354,16 @@ class KAN(torch.nn.Module): # 封装了一个KAN神经网络模型，可以用�
                 )
             )
 
-    def forward(self, x: torch.Tensor, update_grid=False): # 调用每个KANLinear层的forward方法，对输入数据进行前向传播计算输出。
+    def forward(self, x: torch.Tensor, update_grid=False):  # forward pass through all KANLinear layers
         """
-        前向传播函数。
+        Forward pass.
 
-        参数:
-            x (torch.Tensor): 输入张量，形状为 (batch_size, in_features)。
-            update_grid (bool): 是否更新网格。默认为 False。
+        Args:
+            x (torch.Tensor): input tensor of shape (batch_size, in_features).
+            update_grid (bool): whether to update the grid. Default False.
 
-        返回:
-            torch.Tensor: 输出张量，形状为 (batch_size, out_features)。
+        Returns:
+            torch.Tensor: output tensor of shape (batch_size, out_features).
         """
         for layer in self.layers:
             if update_grid:
@@ -363,16 +371,16 @@ class KAN(torch.nn.Module): # 封装了一个KAN神经网络模型，可以用�
             x = layer(x)
         return x
 
-    def regularization_loss(self, regularize_activation=1.0, regularize_entropy=1.0):#计算正则化损失的方法，用于约束模型的参数，防止过拟合。
+    def regularization_loss(self, regularize_activation=1.0, regularize_entropy=1.0):  # regularization over all layers
         """
-        计算正则化损失。
+        Compute the regularization loss.
 
-        参数:
-            regularize_activation (float): 正则化激活项的权重，默认为 1.0。
-            regularize_entropy (float): 正则化熵项的权重，默认为 1.0。
+        Args:
+            regularize_activation (float): weight of the activation regularization term, default 1.0.
+            regularize_entropy (float): weight of the entropy regularization term, default 1.0.
 
-        返回:
-            torch.Tensor: 正则化损失。
+        Returns:
+            torch.Tensor: the regularization loss.
         """
         return sum(
             layer.regularization_loss(regularize_activation, regularize_entropy)

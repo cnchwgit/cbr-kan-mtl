@@ -12,7 +12,7 @@ Usage:
     python scripts/generate_plan.py \
         --cluster-dir clustering_results/t098 \
         --tf-info <path/to/tf_info.csv> \
-        --output-csv-dir data/cluster_t098_csvs \
+        --output-csv-dir data/cluster_csvs \
         --output-json results/cluster_mtl_t098_plan.json
 """
 import argparse
@@ -26,12 +26,12 @@ import pandas as pd
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description='生成基于 t098 聚类结果的 MTL 训练计划')
+    p = argparse.ArgumentParser(description='Generate an MTL training plan based on t098 clustering results')
     p.add_argument('--cluster-dir', required=True,
-                   help='聚类结果目录 (含 cluster_*.txt，格式: Cluster N / Size: n / Members: ...)')
-    p.add_argument('--tf-info', required=True, help='TF 信息 CSV (含 TF_Name, GSM_ID 列)')
-    p.add_argument('--output-csv-dir', required=True, help='簇 TF 列表 CSV 输出目录')
-    p.add_argument('--output-json', required=True, help='训练计划 JSON 输出路径')
+                   help='clustering results directory (containing cluster_*.txt, format: Cluster N / Size: n / Members: ...)')
+    p.add_argument('--tf-info', required=True, help='TF info CSV (with TF_Name, GSM_ID columns)')
+    p.add_argument('--output-csv-dir', required=True, help='output directory for cluster TF list CSVs')
+    p.add_argument('--output-json', required=True, help='output path for the training plan JSON')
     return p.parse_args()
 
 
@@ -43,14 +43,14 @@ def main():
     TEMP_CSV_DIR = args.output_csv_dir
 
     print("=" * 70)
-    print("生成基于 t098 聚类 (threshold=0.98) 的 MTL 训练计划")
-    print("仅包含 size>=2 的 MTL 簇")
+    print("Generate the MTL training plan based on t098 clustering (threshold=0.98)")
+    print("Only MTL clusters with size>=2 are included")
     print("=" * 70)
 
-    # 读取 TF 信息
-    print(f"\n[1/4] 读取 TF 信息: {CSV_PATH}")
+    # Read TF info
+    print(f"\n[1/4] Reading TF info: {CSV_PATH}")
     df = pd.read_csv(CSV_PATH)
-    print(f"  CSV 中 TF 数: {len(df)}")
+    print(f"  Number of TFs in CSV: {len(df)}")
 
     tf_to_gsm = {}
     for _, row in df.iterrows():
@@ -60,15 +60,15 @@ def main():
         tf_to_gsm[tf_name.upper()] = gsm_id
         tf_to_gsm[tf_name.capitalize()] = gsm_id
         tf_to_gsm[tf_name] = gsm_id
-    print(f"  TF→GSM 映射: {len(tf_to_gsm)}")
+    print(f"  TF→GSM mapping: {len(tf_to_gsm)}")
 
-    # 解析聚类文件
-    print(f"\n[2/4] 解析聚类文件: {T098_DIR}")
+    # Parse cluster files
+    print(f"\n[2/4] Parsing cluster files: {T098_DIR}")
     cluster_files = sorted(
         [f for f in os.listdir(T098_DIR) if f.startswith('cluster_') and f.endswith('.txt')],
         key=lambda x: int(re.search(r'cluster_(\d+)', x).group(1))
     )
-    print(f"  找到 {len(cluster_files)} 个簇文件")
+    print(f"  Found {len(cluster_files)} cluster files")
 
     cluster_data = []
     for fname in cluster_files:
@@ -87,22 +87,22 @@ def main():
     total = len(cluster_data)
     mtl_clusters = [(cid, sz, tfs) for cid, sz, tfs in cluster_data if sz >= 2]
     single_clusters = [(cid, sz, tfs) for cid, sz, tfs in cluster_data if sz == 1]
-    print(f"\n  总簇数: {total}")
-    print(f"  MTL 簇: {len(mtl_clusters)} (size>=2)")
-    print(f"  跳过 Single: {len(single_clusters)}")
+    print(f"\n  Total clusters: {total}")
+    print(f"  MTL clusters: {len(mtl_clusters)} (size>=2)")
+    print(f"  Skipped single-TF clusters: {len(single_clusters)}")
 
     Path(TEMP_CSV_DIR).mkdir(parents=True, exist_ok=True)
 
-    # 生成训练计划
-    print(f"\n[3/4] 生成训练计划...")
+    # Generate the training plan
+    print(f"\n[3/4] Generating the training plan...")
     plan = []
     valid_tfs = 0
     skipped_tfs = []
-    seq_idx = 0  # 新编号: 按数值序依次分配 cluster_001, cluster_002, ...
+    seq_idx = 0  # new numbering: assign cluster_001, cluster_002, ... sequentially in numeric order
 
     for cluster_id, size, tf_names in cluster_data:
         if size < 2:
-            continue  # 跳过单TF簇
+            continue  # skip single-TF clusters
 
         tf_gsm_list = []
         for tf in tf_names:
@@ -122,7 +122,7 @@ def main():
                 skipped_tfs.append((cluster_id, tf))
 
         if len(tf_gsm_list) < 2:
-            print(f"  ⚠️ Cluster {cluster_id}: 有效 TF < 2 (剩余 {len(tf_gsm_list)})，跳过")
+            print(f"  ⚠️ Cluster {cluster_id}: valid TF < 2 (remaining {len(tf_gsm_list)}), skipping")
             continue
 
         seq_idx += 1
@@ -137,24 +137,24 @@ def main():
             "TF_List_CSV": temp_csv,
         })
 
-    print(f"\n  计划任务: {len(plan)}")
-    print(f"  计划中 TF: {sum(p['TF_Count'] for p in plan)}")
+    print(f"\n  Planned tasks: {len(plan)}")
+    print(f"  TFs in plan: {sum(p['TF_Count'] for p in plan)}")
 
     size_counts = Counter(p['TF_Count'] for p in plan)
-    print(f"\n簇大小分布:")
+    print(f"\nCluster size distribution:")
     for sz in sorted(size_counts.keys(), reverse=True):
-        print(f"  Size {sz:3d}: {size_counts[sz]:3d} 簇")
+        print(f"  Size {sz:3d}: {size_counts[sz]:3d} clusters")
 
-    # 保存 JSON
-    print(f"\n[4/4] 保存计划...")
+    # Save the JSON
+    print(f"\n[4/4] Saving the plan...")
     Path(OUTPUT_JSON).parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
         json.dump(plan, f, indent=2, ensure_ascii=False)
-    print(f"  ✅ 计划: {OUTPUT_JSON}")
+    print(f"  ✅ Plan: {OUTPUT_JSON}")
     print(f"  ✅ CSVs: {TEMP_CSV_DIR}/")
 
     print(f"\n{'='*70}")
-    print(f"执行估算:")
+    print(f"Execution estimate:")
     total_min = 0
     for p in plan:
         tc = p['TF_Count']
@@ -170,15 +170,15 @@ def main():
             total_min += 10
         else:
             total_min += 8
-    print(f"  估计总时间: {total_min} 分钟 ≈ {total_min/60:.1f} 小时")
+    print(f"  Estimated total time: {total_min} minutes ≈ {total_min/60:.1f} hours")
     print(f"{'='*70}")
 
     if skipped_tfs:
-        print(f"\n⚠️ 找不到 GSM_ID 的 TF (前 20):")
+        print(f"\n⚠️ TFs with no GSM_ID found (first 20):")
         for cid, tf in skipped_tfs[:20]:
             print(f"    Cluster {cid}: {tf}")
         if len(skipped_tfs) > 20:
-            print(f"    ... 共 {len(skipped_tfs)} 个")
+            print(f"    ... {len(skipped_tfs)} in total")
 
 
 if __name__ == '__main__':

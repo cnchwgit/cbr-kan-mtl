@@ -24,7 +24,7 @@ Embedding → Multi-CNN (3 parallel Conv1d) → BiLSTM → LayerNorm
 
 ```
 ├── data/                  # TF cluster lists + FASTA datasets
-│   ├── cluster_t098_csvs/ # TF clusters (e.g. cluster_001.csv)
+│   ├── cluster_csvs/ # TF clusters (e.g. cluster_001.csv)
 │   ├── demo_fasta/        # tiny demo dataset (300 pos + 300 neg per TF)
 │   └── full_fasta/        # full datasets (kept out of git)
 ├── scripts/
@@ -59,7 +59,7 @@ Demo trains MTL on `cluster_001` (SP140 + SP140L), then single-task baselines, a
 ```bash
 # MTL on one TF cluster
 python3 scripts/train_mtl_cluster.py \
-    --tf-list data/cluster_t098_csvs/cluster_001.csv \
+    --tf-list data/cluster_csvs/cluster_001.csv \
     --output-dir results/cluster_001 \
     --data-root /path/to/fasta_datasets \
     --epochs 30 \

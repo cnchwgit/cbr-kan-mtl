@@ -70,7 +70,7 @@ def load_sequences(pos_fasta, neg_fasta, max_samples=15000):
 
 
 def seq_to_tokens(seq, kmer=3, max_len=200):
-    """将DNA序列转为k-mer token ids (滑动窗口)"""
+    """Convert a DNA sequence to k-mer token ids (sliding window)"""
     bases = ['A', 'C', 'G', 'T']
     vocab = {}
     for b1 in bases:
@@ -197,10 +197,10 @@ def main():
         handlers=[logging.FileHandler(log_file), logging.StreamHandler()])
     logger = logging.getLogger(__name__)
 
-    logger.info(f"开始训练 Single-Task: {args.tf_name} (GSM: {args.gsm_id})")
-    logger.info(f"输出目录: {output_dir}")
+    logger.info(f"Start training Single-Task: {args.tf_name} (GSM: {args.gsm_id})")
+    logger.info(f"Output dir: {output_dir}")
 
-    # 简单配置对象（与 baseline 配置等价）
+    # simple config object (equivalent to the baseline config)
     class Config:
         pass
 
@@ -215,14 +215,14 @@ def main():
     config.weight_decay = 1e-4
     config.embedding_pretrained = None
 
-    logger.info(f"配置: epochs={config.num_epochs}, batch={config.batch_size}, "
+    logger.info(f"Config: epochs={config.num_epochs}, batch={config.batch_size}, "
                 f"pad={config.pad_size}, vocab={config.len_vocab}")
 
     pos_fasta = Path(args.data_root) / f"{args.gsm_id}.pos.fasta"
     neg_fasta = Path(args.data_root) / f"{args.gsm_id}.neg.fasta"
     pos_seqs, neg_seqs = load_sequences(str(pos_fasta), str(neg_fasta), args.max_per_class)
     dataset = SequenceDataset(pos_seqs, neg_seqs, config)
-    logger.info(f"数据: {len(pos_seqs)}正 + {len(neg_seqs)}负 = {len(dataset)}")
+    logger.info(f"Data: {len(pos_seqs)} pos + {len(neg_seqs)} neg = {len(dataset)}")
 
     indices = np.arange(len(dataset))
     train_idx, temp_idx = train_test_split(indices, test_size=0.4, random_state=args.seed, stratify=dataset.labels)
@@ -237,7 +237,7 @@ def main():
 
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     model = CBRKAN(config).to(device)
-    logger.info(f"模型参数量: {sum(p.numel() for p in model.parameters()):,}")
+    logger.info(f"Model parameter count: {sum(p.numel() for p in model.parameters()):,}")
 
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
@@ -270,13 +270,13 @@ def main():
         else:
             patience_counter += 1
             if patience_counter >= 15:
-                logger.info("早停")
+                logger.info("Early stopping")
                 break
 
     model.load_state_dict(torch.load(output_dir / 'best_model.pt', map_location=device))
     test_loss, test_preds, test_labels = evaluate(model, test_loader, criterion, device)
     test_metrics = compute_metrics(test_labels, test_preds)
-    logger.info(f"\n测试: ROC={test_metrics['roc_auc']:.4f} PR={test_metrics['pr_auc']:.4f} "
+    logger.info(f"\nTest: ROC={test_metrics['roc_auc']:.4f} PR={test_metrics['pr_auc']:.4f} "
                 f"F1={test_metrics['f1']:.4f} Acc={test_metrics['accuracy']:.4f} MCC={test_metrics['mcc']:.4f}")
 
     test_metrics['tf_name'] = args.tf_name
@@ -294,7 +294,7 @@ def main():
     with open(output_dir / 'summary.json', 'w') as f:
         json.dump(summary, f, indent=2)
 
-    logger.info("完成!")
+    logger.info("Done!")
     return 0
 
 

@@ -23,7 +23,7 @@ SEED=42
 
 echo "==> [1/4] Train CBR-KAN MTL on cluster_001 (SP140 + SP140L)"
 python3 scripts/train_mtl_cluster.py \
-    --tf-list data/cluster_t098_csvs/cluster_001.csv \
+    --tf-list data/cluster_csvs/cluster_001.csv \
     --output-dir results/demo_mtl/cluster_001 \
     --data-root "$DATA_ROOT" \
     --epochs "$EPOCHS" \
@@ -50,7 +50,7 @@ echo "==> [3/4] Paired comparison (MTL vs Single)"
 python3 scripts/compare_mtl_vs_single.py \
     --single-dir results/demo_single \
     --mtl-dir results/demo_mtl \
-    --cluster-csv-dir data/cluster_t098_csvs \
+    --cluster-csv-dir data/cluster_csvs \
     --output-dir results \
     --tag demo
 

@@ -15,7 +15,7 @@ Data: balanced positive/negative ChIP-seq FASTA per TF
 
 Usage:
     python scripts/train_mtl_cluster.py \
-        --tf-list data/cluster_t098_csvs/cluster_001.csv \
+        --tf-list data/cluster_csvs/cluster_001.csv \
         --output-dir results/cluster_001 \
         --data-root /path/to/fasta_datasets \
         --device cuda:0
@@ -52,7 +52,7 @@ from src.models.CBRKAN_MTL import (  # noqa: E402
     CBRKAN_MTL_MultiHead,
 )
 
-# ======================== 路径 ========================
+# ======================== Paths ========================
 DEFAULT_DATA_ROOT = os.environ.get(
     "TFMTL_DATA_ROOT",
     "/path/to/datasets",  # replace with the dir containing {GSM_ID}.pos.fasta / .neg.fasta
@@ -79,7 +79,7 @@ def setup_logging(output_dir):
     return log_file
 
 
-# ======================== 词表与分词（与单任务一致） ========================
+# ======================== Vocabulary and tokenization (same as single-task) ========================
 def build_vocab():
     bases = ['A', 'C', 'G', 'T']
     vocab = {}
@@ -106,7 +106,7 @@ def seq_to_ids(seq, vocab, pad_size=200):
     return ids[:target_len]
 
 
-# ======================== 数据加载（per-TF） ========================
+# ======================== Data loading (per-TF) ========================
 def load_fasta_balanced(gsm_id, max_per_class=15000, data_root=None):
     data_root = Path(data_root or DEFAULT_DATA_ROOT)
     pos_file = data_root / f"{gsm_id}.pos.fasta"
@@ -135,8 +135,8 @@ def load_fasta_balanced(gsm_id, max_per_class=15000, data_root=None):
 
 class MultiTFSequenceDataset(Dataset):
     """
-    多TF数据集：每个样本携带TF名称标签
-    返回: (seq_ids, tf_name, label)
+    Multi-TF dataset: each sample carries a TF name label
+    Returns: (seq_ids, tf_name, label)
     """
     def __init__(self, tf_samples, vocab, pad_size=200):
         """
@@ -158,14 +158,14 @@ class MultiTFSequenceDataset(Dataset):
 
 
 def collate_multi_tf(batch):
-    """自定义 collate_fn：处理字符串型 TF name"""
+    """Custom collate_fn: handles string TF names"""
     seqs = torch.stack([item[0] for item in batch])
     tf_names = [item[1] for item in batch]
     labels = torch.cat([item[2] for item in batch])
     return seqs, tf_names, labels
 
 
-# ======================== 训练与评估 ========================
+# ======================== Training and evaluation ========================
 def train_epoch(model, dataloader, criterion, optimizer, device):
     model.train()
     total_loss = 0
@@ -220,7 +220,7 @@ def compute_metrics(y_true, y_pred):
 
 
 def compute_per_tf_metrics(all_tfs, all_labels, all_preds):
-    """计算每个TF的单独指标"""
+    """Compute the per-TF metrics"""
     tf_data = defaultdict(lambda: {'labels': [], 'preds': []})
     for tf, lbl, pred in zip(all_tfs, all_labels, all_preds):
         tf_data[tf]['labels'].append(lbl)
@@ -235,10 +235,10 @@ def compute_per_tf_metrics(all_tfs, all_labels, all_preds):
     return per_tf
 
 
-# ======================== 主函数 ========================
+# ======================== Main function ========================
 def main():
-    parser = argparse.ArgumentParser(description='CBR-KAN MTL v5 (真 Multi-Head MTL)')
-    parser.add_argument('--tf-list', required=True, help='聚类CSV路径 (columns: TF_Name,GSM_ID,Subgroup)')
+    parser = argparse.ArgumentParser(description='CBR-KAN MTL v5 (true Multi-Head MTL)')
+    parser.add_argument('--tf-list', required=True, help='cluster CSV path (columns: TF_Name,GSM_ID,Subgroup)')
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--lr', type=float, default=0.001)
@@ -260,40 +260,40 @@ def main():
     setup_logging(output_dir)
 
     logging.info("=" * 70)
-    logging.info("CBR-KAN MTL v5 — 真 Multi-Head MTL")
+    logging.info("CBR-KAN MTL v5 — true Multi-Head MTL")
     logging.info("=" * 70)
-    logging.info(f"TF列表: {args.tf_list}")
-    logging.info(f"数据目录: {args.data_root}")
-    logging.info(f"参数: epochs={args.epochs} batch={args.batch_size} lr={args.lr}")
+    logging.info(f"TF list: {args.tf_list}")
+    logging.info(f"Data directory: {args.data_root}")
+    logging.info(f"Params: epochs={args.epochs} batch={args.batch_size} lr={args.lr}")
     logging.info(f"      wd={args.weight_decay} patience={args.patience} seed={args.seed}")
     logging.info(f"      max_per_class={args.max_per_class} embed_dim={args.embed_dim}")
 
-    # 1. 加载TF列表
+    # 1. Load the TF list
     tf_list = pd.read_csv(args.tf_list)
     tf_names = sorted(tf_list['TF_Name'].tolist())
     n_tf = len(tf_names)
-    logging.info(f"TF数量: {n_tf}")
-    logging.info(f"TF名称: {tf_names}")
+    logging.info(f"Number of TFs: {n_tf}")
+    logging.info(f"TF names: {tf_names}")
 
-    # 2. 每个TF单独加载数据
+    # 2. Load data separately for each TF
     vocab = build_vocab()
     tf_samples = {}  # {tf_name: {'pos': [...], 'neg': [...]}}
     for _, row in tf_list.iterrows():
         tf_name = row['TF_Name']
         p, n = load_fasta_balanced(row['GSM_ID'], args.max_per_class, data_root=args.data_root)
         tf_samples[tf_name] = {'pos': p, 'neg': n}
-        logging.info(f"  {tf_name:12s}: {len(p):5d}正 + {len(n):5d}负 = {len(p)+len(n):5d}")
+        logging.info(f"  {tf_name:12s}: {len(p):5d} pos + {len(n):5d} neg = {len(p)+len(n):5d}")
 
     total = sum(len(d['pos']) + len(d['neg']) for d in tf_samples.values())
-    logging.info(f"总数据: {total} 样本（{n_tf}个TF）")
+    logging.info(f"Total data: {total} samples ({n_tf} TFs)")
 
-    # 3. 每个TF独立划分 60/20/20
+    # 3. Independent 60/20/20 split for each TF
     train_samples, val_samples, test_samples = [], [], []
     for tf_name, data in tf_samples.items():
         if len(data['pos']) == 0 or len(data['neg']) == 0:
-            logging.warning(f"  ⚠️ {tf_name} 数据为空，跳过")
+            logging.warning(f"  ⚠️ {tf_name} has empty data, skipping")
             continue
-        # 构建该TF的样本列表 [(seq, tf_name, label)]
+        # build the sample list for this TF [(seq, tf_name, label)]
         all_s = [(seq, tf_name, 1) for seq in data['pos']]
         all_s += [(seq, tf_name, 0) for seq in data['neg']]
         all_labels = [1] * len(data['pos']) + [0] * len(data['neg'])
@@ -309,10 +309,10 @@ def main():
         val_samples.extend([all_s[i] for i in val_i])
         test_samples.extend([all_s[i] for i in test_i])
 
-    logging.info(f"\n划分: train={len(train_samples)} val={len(val_samples)} test={len(test_samples)}")
+    logging.info(f"\nSplit: train={len(train_samples)} val={len(val_samples)} test={len(test_samples)}")
     logging.info(f"      60/20/20, seed={args.seed}")
 
-    # 4. 创建数据集和数据加载器
+    # 4. Create datasets and dataloaders
     train_ds = MultiTFSequenceDataset(train_samples, vocab)
     val_ds = MultiTFSequenceDataset(val_samples, vocab)
     test_ds = MultiTFSequenceDataset(test_samples, vocab)
@@ -327,7 +327,7 @@ def main():
         test_ds, batch_size=args.batch_size, shuffle=False,
         num_workers=0, collate_fn=collate_multi_tf)
 
-    # 5. 模型
+    # 5. Model
     device = args.device if torch.cuda.is_available() else 'cpu'
     model = CBRKAN_MTL_MultiHead(
         tf_names=tf_names, len_vocab=len(vocab), embed_dim=args.embed_dim
@@ -338,13 +338,13 @@ def main():
     head_params = sum(p.numel() for p in model.tf_heads.parameters())
     per_head = head_params // max(n_tf, 1)
 
-    logging.info(f"\n设备: {device}")
-    logging.info(f"总参数量: {total_params:,}")
+    logging.info(f"\nDevice: {device}")
+    logging.info(f"Total parameters: {total_params:,}")
     logging.info(f"  backbone: {backbone_params:,}")
     logging.info(f"  per-TF heads: {head_params:,} ({n_tf} heads × {per_head:,}/head)")
-    logging.info(f"  平均每TF: {(backbone_params + per_head):,}")
+    logging.info(f"  Average per TF: {(backbone_params + per_head):,}")
 
-    # 6. 训练
+    # 6. Training
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=args.lr_patience)
@@ -355,7 +355,7 @@ def main():
     patience_counter = 0
     history = []
 
-    logging.info(f"\n🚀 训练开始 ({args.epochs} epochs)...")
+    logging.info(f"\n🚀 Training started ({args.epochs} epochs)...")
     t_start = time.time()
 
     for epoch in range(args.epochs):
@@ -387,24 +387,24 @@ def main():
             f"perTF: {val_per_tf_avg_auc:.4f}  "
             f"LR: {optimizer.param_groups[0]['lr']:.2e}")
 
-        # 早停用 overall val_auc
+        # use overall val_auc for early stopping
         if val_metrics['roc_auc'] > best_val_auc:
             best_val_auc = val_metrics['roc_auc']
             best_epoch = epoch + 1
             patience_counter = 0
             torch.save(model.state_dict(), output_dir / 'best_model.pt')
-            logging.info(f"   ✅ 最佳模型 (val_auc={best_val_auc:.4f})")
+            logging.info(f"   ✅ Best model (val_auc={best_val_auc:.4f})")
         else:
             patience_counter += 1
             if patience_counter >= args.patience:
-                logging.info(f"   ⏰ 早停 (patience={args.patience})")
+                logging.info(f"   ⏰ Early stopping (patience={args.patience})")
                 break
 
     elapsed = time.time() - t_start
-    logging.info(f"\n训练完成: {elapsed:.0f}s ({elapsed/60:.1f}min, {elapsed/3600:.2f}h)")
+    logging.info(f"\nTraining finished: {elapsed:.0f}s ({elapsed/60:.1f}min, {elapsed/3600:.2f}h)")
 
-    # 7. 测试集评估
-    logging.info("\n📊 测试集评估...")
+    # 7. Test set evaluation
+    logging.info("\n📊 Test set evaluation...")
     if os.path.exists(output_dir / 'best_model.pt'):
         model.load_state_dict(torch.load(output_dir / 'best_model.pt', map_location=device))
     test_loss, test_preds, test_labels, test_tfs = evaluate(
@@ -413,7 +413,7 @@ def main():
     test_per_tf = compute_per_tf_metrics(test_tfs, test_labels, test_preds)
 
     logging.info(f"\n{'='*70}")
-    logging.info(f"整体测试指标:")
+    logging.info(f"Overall test metrics:")
     logging.info(f"  ROC-AUC: {test_metrics['roc_auc']:.4f}")
     logging.info(f"  PR-AUC:  {test_metrics['pr_auc']:.4f}")
     logging.info(f"  F1:      {test_metrics['f1']:.4f}")
@@ -421,17 +421,17 @@ def main():
     logging.info(f"  Prec:    {test_metrics['precision']:.4f}")
     logging.info(f"  Recall:  {test_metrics['recall']:.4f}")
 
-    # 打印每个TF的测试指标
-    logging.info(f"\n每个TF测试指标:")
+    # print the test metrics of each TF
+    logging.info(f"\nPer-TF test metrics:")
     for tf_name in sorted(test_per_tf.keys()):
         m = test_per_tf[tf_name]
         logging.info(f"  {tf_name:12s}: ROC={m['roc_auc']:.4f}  PR={m['pr_auc']:.4f}  F1={m['f1']:.4f}  "
                       f"Acc={m['accuracy']:.4f}")
     avg_per_tf = np.mean([m['roc_auc'] for m in test_per_tf.values()])
-    logging.info(f"  平均 per-TF ROC: {avg_per_tf:.4f}")
+    logging.info(f"  Average per-TF ROC: {avg_per_tf:.4f}")
 
-    # 8. 保存结果
-    # 每TF指标
+    # 8. Save the results
+    # per-TF metrics
     tf_metrics_rows = []
     for tf_name in sorted(test_per_tf.keys()):
         m = test_per_tf[tf_name]
@@ -447,10 +447,10 @@ def main():
         })
     pd.DataFrame(tf_metrics_rows).to_csv(output_dir / 'test_tf_metrics.csv', index=False)
 
-    # 训练历史
+    # training history
     pd.DataFrame(history).to_csv(output_dir / 'training_history.csv', index=False)
 
-    # 摘要
+    # summary
     summary = {
         'experiment': 'CBRKAN_MTL_v5_true_multi_head',
         'version': 5,
@@ -477,10 +477,10 @@ def main():
         json.dump(summary, f, indent=2)
 
     logging.info(f"\n{'='*70}")
-    logging.info(f"✅ 完成!")
+    logging.info(f"✅ Done!")
     logging.info(f"  Overall Test ROC: {test_metrics['roc_auc']:.4f}")
     logging.info(f"  Avg Per-TF ROC:  {avg_per_tf:.4f}")
-    logging.info(f"  结果保存至: {output_dir}")
+    logging.info(f"  Results saved to: {output_dir}")
     logging.info(f"{'='*70}")
 
 
